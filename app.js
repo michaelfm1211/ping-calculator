@@ -90,10 +90,7 @@ function go() {
 	const ip_dst = parseIP(document.querySelector('#ip_dst').value || '127.0.0.1');
 	const icmp_id = parseInt(document.querySelector('#icmp_id').value, 16) || 0;
 	const icmp_seq = parseInt(document.querySelector('#icmp_seq').value, 16) || 0;
-	let icmp_data = document.querySelector('#icmp_data').value;
-
-	// align data to 16 bits
-	icmp_data = icmp_data.length % 2 === 0 ? icmp_data : icmp_data + '\0';
+	const icmp_data = document.querySelector('#icmp_data').value;
 
 	// calculate the IP packet length
 	const ip_len = icmp_data.length + 28;
@@ -109,6 +106,8 @@ function go() {
 
 	// calculate the ICMP header checksum
 	let icmp_chkdata = [(8 << 8) | 0, 0, icmp_id, icmp_seq];
+	// temporary alignment to 16 bits for checksum. undone later
+	const tmp = icmp_data.length % 2 === 0 ? icmp_data : icmp_data + '\0';
 	for (let i = 0; i < icmp_data.length; i += 2) {
 		icmp_chkdata.push((icmp_data.charCodeAt(i) << 8) |
 			icmp_data.charCodeAt(i + 1));
@@ -120,9 +119,15 @@ function go() {
 	// output everything to the output bin
 	ip_chkdata[5] = ip_chk;
 	icmp_chkdata[1] = icmp_chk;
-	document.querySelector('#output_bin').textContent = ip_chkdata.map(n =>
-		asHex(n, 4)).join(' ') + ' ' + icmp_chkdata.map(n =>
-			asHex(n, 4)).join(' ');
+	let out =  ip_chkdata.map(n => asHex(n, 4)).join(' ') + ' ';
+	// remove padding used in checksum calculation
+	if (icmp_data.length % 2 === 0) {
+		out += icmp_chkdata.map(n => asHex(n, 4)).join(' ');
+	} else {
+		out += icmp_chkdata.slice(0, -1).map(n => asHex(n, 4)).join(' ');
+		out += ' ' + asHex(icmp_chkdata.at(-1), 4).slice(0, 2);
+	}
+	document.querySelector('#output_bin').textContent = out;
 }
 
 const inputs = document.getElementsByTagName('input');
