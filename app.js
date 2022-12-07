@@ -90,7 +90,10 @@ function go() {
 	const ip_dst = parseIP(document.querySelector('#ip_dst').value || '127.0.0.1');
 	const icmp_id = parseInt(document.querySelector('#icmp_id').value, 16) || 0;
 	const icmp_seq = parseInt(document.querySelector('#icmp_seq').value, 16) || 0;
-	const icmp_data = document.querySelector('#icmp_data').value;
+	let icmp_data = document.querySelector('#icmp_data').value;
+
+	// align data to 16 bits
+	icmp_data = icmp_data.length % 2 === 0 ? icmp_data : icmp_data + '\0';
 
 	// calculate the IP packet length
 	const ip_len = icmp_data.length + 28;
@@ -106,10 +109,9 @@ function go() {
 
 	// calculate the ICMP header checksum
 	let icmp_chkdata = [(8 << 8) | 0, 0, icmp_id, icmp_seq];
-	const tmp = icmp_data.length % 2 === 0 ? icmp_data : icmp_data + '\0';
-	for (let i = 0; i < tmp.length; i += 2) {
-		icmp_chkdata.push((tmp.charCodeAt(i) << 8) |
-			tmp.charCodeAt(i + 1));
+	for (let i = 0; i < icmp_data.length; i += 2) {
+		icmp_chkdata.push((icmp_data.charCodeAt(i) << 8) |
+			icmp_data.charCodeAt(i + 1));
 	}
 	if (Number.isNaN(icmp_chkdata)) return alert('Error');
 	const icmp_chk = checksum(icmp_chkdata);
